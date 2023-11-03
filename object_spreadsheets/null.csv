@@ -1,0 +1,6 @@
+Name,AlternateName,Typ,RAJ2000,DecJ2000,Result,qual,allwise_ra_j2000,allwise_dec_j2000,query_rad,Stars
+Reigon 1,-,-,46.77637805,45.5499198,Yes,3,-,-,176,~13
+Reigon 2,-,-,86.73115748,-45.8501648,Yes,2,-,-,180,~15
+Reigon 3,-,-,183.7842123,-41.23658745,Yes,3,-,-,40,?
+Reigon 4,-,-,233.7860997,-7.219987662,Yes,3,-,-,100,?
+Reigon 5,-,-,103.7831191,-27.23474229,Yes,3,-,-,120,~50
