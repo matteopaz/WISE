@@ -1,4 +1,5 @@
-
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 def plot_grad_flow(named_parameters):
     ave_grads = []
