@@ -11,9 +11,9 @@ def get_flux(tbl, colnames):
     # Type processing
     tbl[tbl == 'null'] = 0
     mjds = tbl[:,mjdindx].astype(float)
-    w1mpro = tbl[:, w1indx].astype(float)
+    w1mpro = np.nan_to_num(tbl[:, w1indx].astype(float))
     w1sig = np.nan_to_num(tbl[:, w1sindx].astype(float))
-    w2mpro = tbl[:, w2indx].astype(float)
+    w2mpro = np.nan_to_num(tbl[:, w2indx].astype(float))
     w2sig = np.nan_to_num(tbl[:, w2sindx].astype(float))
 
     # Sort by date
