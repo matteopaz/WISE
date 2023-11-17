@@ -1,5 +1,26 @@
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+import re
+
+def get_coordinates(coordstring):
+  hour_regex = re.compile(r'^[+-]?([0-9]{2,3}){1}\s+([0-9]{2}){1}\s+([0-9]{2}(\.[0-9]{1,})?){1}\s+[+-]{1}([0-9]{2,3}){1}\s+([0-9]{2}){1}\s+([0-9]{2}(\.[0-9]{1,})?){1}$')
+  deg_regex = re.compile(r'^[+-]?([0-9]{1,}(.[0-9]{1,})?){1}\s+[+-]?([0-9]{1,}(.[0-9]{1,})?){1}$')
+
+  is_hour = bool(hour_regex.search(coordstring))
+  is_deg = bool(deg_regex.search(coordstring))
+
+  if not is_hour and not is_deg:
+      raise ValueError("Invalid coordinate string")
+
+  if is_hour:
+      c = SkyCoord(coordstring, unit=(u.hourangle, u.deg))
+  else:
+      c = SkyCoord(coordstring, unit=(u.deg))
+
+  return c
+
 
 def plot_grad_flow(named_parameters):
     ave_grads = []

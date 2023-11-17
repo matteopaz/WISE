@@ -1,0 +1,8 @@
+# Ignore all pickle files in cached_data
+cached_data/*.pkl
+
+# Ignore __pycache__ directory
+__pycache__/
+
+# Ignore .vscode directory
+.vscode/
