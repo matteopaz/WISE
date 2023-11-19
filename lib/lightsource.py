@@ -149,7 +149,7 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
 
         # Len(pts) x 3 matrix
         # IMPORTANT! Defines order of data
-        return torch.tensor(np.stack((w1, std, day), axis=0).T)
+        return torch.tensor(np.stack((w1f, std, day), axis=0).T)
     
     def __getitem__(self, key):
         return self.datatable[key]
