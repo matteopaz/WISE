@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import torch
 
 class LightSource: # All the data on a single source from WISE, nicely formatted
     def __init__(self, dataframe):
@@ -7,9 +8,12 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         if type(dataframe) != pd.DataFrame:
             raise TypeError("Input must be a pandas dataframe")
         self.pandas = dataframe
+        self.pandas.index = range(len(self.pandas))
         self.numpy = self.pandas.to_numpy()
-
-        # --------------- Datatable Init --------------- #
+        self.datatable = self.init_datatable()
+ 
+    
+    def init_datatable(self):
         tbl = self.numpy
 
         # Get correct columns
@@ -81,7 +85,7 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         # Normalized dt
         dt_norm = np.array([np.arcsinh(dt_ex / np.median(dt)) for dt_ex in dt]).flatten()
 
-        self.datatable = {
+        return {
             "raw": {
                 "w1": w1mpro,
                 "w1flux": w1flux,
@@ -117,6 +121,7 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
                 }
             }
         }
+        
 
     def get_numpy(self):
         return self.numpy
@@ -126,6 +131,11 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
     
     def get_datatable(self):
         return self.datatable
+    
+    def get_subset(self, start_idx, end_idx):
+        # take only rows from start_idx to end_idx
+        trimmed = self.pandas.iloc[start_idx:end_idx]
+        return LightSource(trimmed)
 
     def to_tensor(self):
         # Len(pts) x 3 matrix
@@ -139,7 +149,10 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
 
         # Len(pts) x 3 matrix
         # IMPORTANT! Defines order of data
-        return np.stack((w1f, std, day), axis=0).T
+        return torch.tensor(np.stack((w1, std, day), axis=0).T)
     
     def __getitem__(self, key):
         return self.datatable[key]
+
+    def __len__(self):
+        return len(self.datatable)

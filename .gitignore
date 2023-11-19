@@ -4,5 +4,15 @@ cached_data/*.pkl
 # Ignore __pycache__ directory
 __pycache__/
 
+lib/__pycache__
+
+processed_datasets/*
+
 # Ignore .vscode directory
 .vscode/
+
+# ignore everything in dataset_imgs except for placeholder
+!dataset_imgs/placeholder
+dataset_imgs/*
+
+.DS_Store
