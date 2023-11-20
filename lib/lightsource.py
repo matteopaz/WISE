@@ -155,4 +155,6 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         return self.datatable[key]
 
     def __len__(self):
-        return len(self.datatable)
+        if len(self.numpy) != len(self.pandas):
+            raise Exception("what")
+        return len(self.numpy)

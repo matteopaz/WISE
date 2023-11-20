@@ -72,10 +72,12 @@ class SourceSet(Dataset):
     self.buckets = {"null": [], "nova": [], "pulsating_var": [], "transit": []}
     for kind in buckets:
         for obj in buckets[kind]:
+            print("Length = ", len(obj))
             if len(obj) < point_limit:
                 self.buckets[kind].append(obj.to_tensor())
             else:
                 newobj = obj.get_subset(len(obj) - point_limit, len(obj)-1)
+                print("newlen ", len(newobj))
                 self.buckets[kind].append(newobj.to_tensor())
                 
 
