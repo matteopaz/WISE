@@ -3,6 +3,10 @@ import plotly.graph_objects as go
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 import re
+import torch
+import torch.nn as nn
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def get_coordinates(coordstring):
   hour_regex = re.compile(r'^[+-]?([0-9]{2,3}){1}\s+([0-9]{2}){1}\s+([0-9]{2}(\.[0-9]{1,})?){1}\s+[+-]{1}([0-9]{2,3}){1}\s+([0-9]{2}){1}\s+([0-9]{2}(\.[0-9]{1,})?){1}$')
@@ -21,7 +25,20 @@ def get_coordinates(coordstring):
 
   return c
 
+def padded_collate(tensors):
+  datas = []
+  labels = []
+  for tensor, label in tensors:
+    datas.append(tensor)
+    labels.append(label)
 
+  batched = nn.utils.rnn.pad_sequence(datas, batch_first=True).to(device)
+  labels = torch.stack(labels, dim=0)
+
+
+  return (batched, labels)
+
+  
 def plot_grad_flow(named_parameters):
     ave_grads = []
     layers = []
@@ -55,7 +72,7 @@ def getprogressplot(trainloss, validloss, acc, nullac, novacc, pulsatoracc, tran
 
   fig.add_trace(go.Scatter(x=list(range(EPOCHS)), y=transitacc, mode='lines', name='Transit Accuracy', line=dict(color='purple')))
 
-  fig.add_trace(go.Scatter(x=list(range(EPOCHS)), y=acc, mode='lines', name='Transit Accuracy', line=dict(color='red')))
+  fig.add_trace(go.Scatter(x=list(range(EPOCHS)), y=acc, mode='lines', name='Total Validation Accuracy', line=dict(color='red')))
 
 
 
