@@ -3,11 +3,14 @@ import pandas as pd
 import torch
 
 class LightSource: # All the data on a single source from WISE, nicely formatted
-    def __init__(self, dataframe):
+    def __init__(self, dataframe, name):
         # --------------- Class Init --------------- #
         if type(dataframe) != pd.DataFrame:
             raise TypeError("Input must be a pandas dataframe")
+        
+        self.name = name
         self.pandas = dataframe
+        self.location = (self.pandas["ra"].mean(axis=0), self.pandas["dec"].mean(axis=0))
         self.pandas.index = range(len(self.pandas))
         self.numpy = self.pandas.to_numpy()
         self.datatable = self.init_datatable()

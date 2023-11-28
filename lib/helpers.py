@@ -113,3 +113,7 @@ def plot_from_tensor(data):
 
 
   return fig
+
+
+def to_inference_input(tensor):
+  return torch.unsqueeze(tensor, dim=0)
