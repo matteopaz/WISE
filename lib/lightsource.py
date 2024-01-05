@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import torch
-
 class LightSource: # All the data on a single source from WISE, nicely formatted
     def __init__(self, dataframe, name):
         # --------------- Class Init --------------- #
@@ -138,7 +137,7 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
     def get_subset(self, start_idx, end_idx):
         # take only rows from start_idx to end_idx
         trimmed = self.pandas.iloc[start_idx:end_idx]
-        return LightSource(trimmed)
+        return LightSource(trimmed, self.name)
 
     def to_tensor(self):
         # Len(pts) x 3 matrix
@@ -152,7 +151,8 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
 
         # Len(pts) x 3 matrix
         # IMPORTANT! Defines order of data
-        return torch.tensor(np.stack((w1f, std, day), axis=0).T)
+        tnsr = torch.tensor(np.stack((w1f, std, day), axis=0).T)
+        return tnsr.to(torch.float32)
     
     def __getitem__(self, key):
         return self.datatable[key]

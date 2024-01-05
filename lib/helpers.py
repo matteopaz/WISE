@@ -34,9 +34,10 @@ def padded_collate(tensors):
 
   batched = nn.utils.rnn.pad_sequence(datas, batch_first=True).to(device)
   labels = torch.stack(labels, dim=0)
-
-
   return (batched, labels)
+
+def nudft_padded_colate(tensors):
+  return
 
   
 def plot_grad_flow(named_parameters):
@@ -57,6 +58,7 @@ def plot_grad_flow(named_parameters):
 
 
 def getprogressplot(trainloss, validloss, acc, nullac, novacc, pulsatoracc, transitacc, EPOCHS, e):
+
   fig = go.Figure()
 
 

@@ -2,6 +2,8 @@ from copy import copy
 import random
 import torch
 from torch.utils.data import Dataset
+# import blank dict
+from collections import defaultdict
 
 
 def swap(pct):
@@ -69,13 +71,13 @@ class SourceSet(Dataset):
     self.choose = choose
     self.augmentation_frac = augmentation_frac
 
-    self.buckets = {"null": [], "nova": [], "pulsating_var": [], "transit": []}
+    self.buckets = defaultdict(list)
     for kind in buckets:
         for obj in buckets[kind]:
             if len(obj) < point_limit:
                 self.buckets[kind].append(obj.to_tensor())
             else:
-                newobj = obj.get_subset(len(obj) - point_limit, len(obj)-1)
+                newobj = obj.get_subset(len(obj) - point_limit, len(obj))
                 self.buckets[kind].append(newobj.to_tensor())
                 
 
@@ -108,7 +110,7 @@ class SourceSet(Dataset):
     for kind in self.buckets: # Data, Label pairing
       for i, ex in enumerate(self.buckets[kind]):
 
-        label = torch.zeros(4)
+        label = torch.zeros(len(self.buckets.keys()))
         label[list(self.buckets.keys()).index(kind)] = 1
 
         self.all.append((ex, label))
