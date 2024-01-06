@@ -15,4 +15,7 @@ processed_datasets/*
 !dataset_imgs/placeholder
 dataset_imgs/*
 
+!state_dicts/placeholder
+state_dicts/*
+
 .DS_Store
