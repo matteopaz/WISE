@@ -9,10 +9,10 @@ sys.path.append(ROOT + "lib")
 
 from plotly_style import update_layout
 
-def get_trace(lightsource, key):
-
-  x_data = lightsource["norm"]["day"]
-  y_data = lightsource["norm"][key]
+def get_trace(lightsource, key, norm=True):
+  basekey = "norm" if norm else "raw"
+  x_data = lightsource[basekey]["day"]
+  y_data = lightsource[basekey][key]
 
   sort_idxs = np.argsort(x_data)
 
@@ -28,12 +28,12 @@ def get_trace(lightsource, key):
     name=key,
   )
 
-def plot_from_lightsource(lightsource, ys=["w1"]):
+def plot_from_lightsource(lightsource, ys=["w1"], norm=True):
 
   fig = go.Figure()
 
   for y in ys:
-    fig.add_trace(get_trace(lightsource, y))
+    fig.add_trace(get_trace(lightsource, y, norm))
 
   update_layout(fig, legend_out=True)
 
@@ -72,7 +72,7 @@ for kind in buckets:
     for objname in buckets[kind]:
         lightsource = buckets[kind][objname]
         
-        fig = plot_from_lightsource(lightsource, ["w1", "w2"])
+        fig = plot_from_lightsource(lightsource, ["w1flux"], norm=True)
         
         fig.update_layout(
             title="{} example - {}".format(kind, objname),
@@ -84,7 +84,8 @@ for kind in buckets:
                 color="Black"
             )
         )
-        
+
+        print(f'Saving image to: {os.path.abspath(ROOT + "dataset_imgs/{}/{}.jpg".format(kind, objname))}')
         fig.write_image(ROOT + "dataset_imgs/{}/{}.jpg".format(kind, objname))
 
         

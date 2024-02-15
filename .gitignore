@@ -6,6 +6,12 @@ __pycache__/
 
 lib/__pycache__
 
+.ipynb_checkpoints/
+
+runner/
+
+state_dicts/
+
 processed_datasets/*
 
 # Ignore .vscode directory

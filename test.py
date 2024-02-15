@@ -1,112 +1,93 @@
 import torch
-import numpy as np
-import plotly.graph_objects as go
-import pickle
+import os
 import sys
-sys.path.append("./lib")
-from lightsource import LightSource
+import plotly.graph_objects as go
+from math import sqrt
+import numpy as np
+
+shortspacing = 1 # days
+longspacing = 29 # days between obs groups
+
+def apparitionsbeforegap():
+    options = [10, 10, 10, 10, 10, 10, 14, 14, 14, 14, 20, 20, 20, 30, 30, 50, 100, 200, 100000]
+    return np.random.choice(np.array(options))
+    
+days = 250
+
+buckets = {
+    "null": [],
+    "nova": [],
+    "pulsating_var": [],
+    "transit": []
+}
+
+def gen_sampling():
+    x = [0]
+    i = 0
+    app = apparitionsbeforegap()
+    while x[-1] < days:
+        if i % app == 0:
+            x.append(x[-1] + longspacing)
+        else:
+            x.append(x[-1] + shortspacing)
+        i += 1
+    return torch.tensor(x)
+
+torch.set_default_device("cpu") 
+
+sys.path.append("./models")
+from fourier import FUDFT, FDFT
+
+l = days
+# inst = FUDFT(l, real=True, remove_zerocomp=False)
+  
+# t = torch.linspace(0,1,l+100)[torch.randperm(l+100)][100:] 
+# t = torch.sort(t).values
+t = gen_sampling()
+t = t
+
+x = torch.sin(2 * torch.pi * t / l)
+ 
+tch = (1 / sqrt(l)) * torch.abs(torch.fft.fft(x)).to(torch.float32) 
+col = -2 * torch.pi * 1j * t * (l - 1) / (l * torch.max(t))
+row = torch.arange(l)
+exp = torch.outer(row, col) 
+four = torch.exp(exp)
+mat = (1 / sqrt(l))*torch.matmul(four, x.to(torch.cfloat))
+mat = torch.abs(mat)
 
 
 
-with open("cached_data/train_buckets.pkl", "rb") as f:
-   exs = pickle.load(f) 
-
-ex = exs["nova"][0]
-print(ex.name)
-
-mjd = ex["norm"]["mjd"]
-# time = np.arange(0, len(ex["raw"]["w1"]))
-signal = ex["norm"]["w1"]
-
-time = ex["norm"]["day"]
-# N = len(time)
-
-# signal = ex["norm"]["w1"]
-
-# time = np.linspace(0, 2*np.pi, 1000)
-N = len(time)
-# signal = np.sin(time)
-
-unity = np.exp(-2*np.pi*1j / N)
-
-access = lambda i: time[int(i)] * N
-# access = lambda i: i
-access = np.vectorize(access)
-
-dftm = np.fromfunction(lambda i,j: unity**(i*access(j)), (N,N))
-
-dft = np.matmul(dftm, signal.reshape(N,1))
-
-
-realdft = np.fft.fftshift(np.fft.fft(signal))[1:]
-
-
-tr1 = go.Scatter(
-    # x= (mjd) % 2.780714,
-    x= (mjd),
-    y=signal,
-    mode="markers",
-    # style markers
-    marker=dict(
-        size=3,
-        color="blue",
-    ),
-)
-
-tr2im = go.Scatter(
-    x=time,
-    y=np.imag(dft).reshape(N)[1:],
-    mode="lines",
-    line=dict(dash="dot"),
-    name="Imaginary"
-)
-
-tr2rl = go.Scatter(
-    x=time,
-    y=np.real(dft).reshape(N)[1:],
-    mode="lines",
-    name="Real"
-)
-
-tr2mag = go.Scatter(
-    # x=(np.arange(len(dft))/(mjd[-1]-mjd[0])), #period
-    x=(np.arange(len(dft))), #period
-    y=np.abs(dft).reshape(N)[1:],
-    mode="lines",
-    name="Magnitude"
-)
-
-samples = len(signal)
-elapsed = mjd[-1]-mjd[0]
-sampling_rate = samples/elapsed
-
-biggest_bucket = np.argmax(dft)
-freq = biggest_bucket * sampling_rate / len(dft)
-period = 1/freq
-
-print("samples: ", samples)
-print("elapsed: ", elapsed)
-print("sampling rate:", sampling_rate)
-print("biggest bucket: ", biggest_bucket)
-print("freq: ", freq)
-print("period: ", period)
 
 
 fig = go.Figure()
-fig.add_trace(tr1)
-fig.show()
-fig2= go.Figure()
-fig2.add_trace(tr2im)
-fig2.add_trace(tr2rl)
-fig2.add_trace(tr2mag)
-fig2.show()
+tr1 = go.Scatter(
+    x=t,
+    y=x,
+    mode="markers",
+    name="signal"
+)
+tr2 = go.Scatter(
+    x=t,
+    y=mat,
+    mode="lines",
+    name="mat"
+)
+tr3 = go.Scatter(
+    x=t,
+    y=tch,
+    mode="lines",
+    name="tch"
+)
+tr4 = go.Scatter(
+    x=np.linspace(0, torch.max(t), len(t)), 
+    y=x,
+    mode="markers",
+    name="Equispaced signal"
+)
 
-# fig3 = go.Figure()
-# tr3 = go.Scatter(
-#     x=list(range(len(realdft))),
-#     y=np.abs(realdft).reshape(N),
-#     mode="lines",
-#     name="Magnitude"
-# )
-# fig3.add_trace(tr3)
-# fig3.show()
+fig.add_trace(tr1)
+fig.add_trace(tr2)
+fig.add_trace(tr3)
+fig.add_trace(tr4)
+fig.write_html("temp.html")

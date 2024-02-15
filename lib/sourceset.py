@@ -27,7 +27,7 @@ def flip_x(data):
 def flip_y(data):
   new = torch.clone(data)
   new[:, 0] = -1 * new[:, 0]
-  new[:, 2] = -1 * new[:, 2]
+  # new[:, 2] = -1 * new[:, 2]
   return new
 
 def resample(std, pct=0.25):
@@ -41,7 +41,7 @@ def resample(std, pct=0.25):
     stddev = torch.tensor(stddev)
 
     new[:, 0] = torch.normal(new[:, 0], stddev)
-    new[:, 2] = torch.normal(new[:, 2], stddev)
+    # new[:, 2] = torch.normal(new[:, 2], stddev)
     return new
 
   return inner
@@ -56,17 +56,26 @@ def rescale_x(data):
   return new
 
 def rescale_y(data):
-  s = random.random() * 1.5
+  s = random.random() * 2
 
   new = torch.clone(data)
 
   new[:, 0] = s * new[:, 0]
-  new[:, 2] = s * new[:, 2]
+  # new[:, 2] = s * new[:, 2]
 
   return new
 
+def shift_y(data):
+  s = (random.random() - 0.5) * 4
+  new = torch.clone(data)
+  new[:, 0] += s
+  return new
+
 class SourceSet(Dataset):
-  def __init__(self, buckets, augmentation=None, choose=3, augmentation_frac=3, equalize=False, point_limit=1000):
+  def __init__(self, buckets, augmentation=None, choose=3, augmentation_frac=3, equalize=False, point_limit=6000, tracking=False):
+    
+    if augmentation and tracking:
+      raise Exception("Cannot track while augmenting, please only use for validation")
 
     self.choose = choose
     self.augmentation_frac = augmentation_frac
@@ -75,10 +84,16 @@ class SourceSet(Dataset):
     for kind in buckets:
         for obj in buckets[kind]:
             if len(obj) < point_limit:
+              if tracking:
+                self.buckets[kind].append((obj.to_tensor(), obj.name))
+              else:
                 self.buckets[kind].append(obj.to_tensor())
             else:
                 newobj = obj.get_subset(len(obj) - point_limit, len(obj))
-                self.buckets[kind].append(newobj.to_tensor())
+                if tracking:
+                  self.buckets[kind].append((newobj.to_tensor(), obj.name))
+                else:
+                  self.buckets[kind].append(newobj.to_tensor())
                 
 
     self.all = []
@@ -113,7 +128,10 @@ class SourceSet(Dataset):
         label = torch.zeros(len(self.buckets.keys()))
         label[list(self.buckets.keys()).index(kind)] = 1
 
-        self.all.append((ex, label))
+        if tracking:
+          self.all.append((ex[0], label, ex[1])) # Data, label, name
+        else:
+          self.all.append((ex, label))
         self.buckets[kind][i] = ((ex, label))
 
   def apply_pipeline(self, examples, pipeline):
@@ -144,4 +162,4 @@ class SourceSet(Dataset):
     return len(self.all)
 
 
-default_aug = [(rescale_x, 1), (rescale_y, 1), (resample(0.65, 0.35), 1), (flip_x, 1), (swap(0.1), 1), (flip_y, 1), (swap(0.2), 1), (resample(1, 0.25), 1)]
+default_aug = [(rescale_y, 1), (rescale_x, 1), (resample(0.65, 0.35), 1), (flip_x, 1), (swap(0.1), 1), (flip_y, 1), (swap(0.3), 1), (resample(1, 0.35), 1), (shift_y, 1)]

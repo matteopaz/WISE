@@ -5,6 +5,7 @@ from astropy.coordinates import SkyCoord
 import re
 import torch
 import torch.nn as nn
+from torch.utils.data import default_collate
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -32,13 +33,38 @@ def padded_collate(tensors):
     datas.append(tensor)
     labels.append(label)
 
-  batched = nn.utils.rnn.pad_sequence(datas, batch_first=True).to(device)
+  batched = nn.utils.rnn.pad_sequence(datas, batch_first=True).to(device) #TODO (true??)
   labels = torch.stack(labels, dim=0)
   return (batched, labels)
 
-def nudft_padded_colate(tensors):
-  return
+def padded_collate_nudft(tensors):
+  datas = []
+  labels = []
+  for tensor, label in tensors:
+    datas.append(tensor)
+    labels.append(label)
 
+  padval = 123 * 10**-7
+  batched = nn.utils.rnn.pad_sequence(datas, batch_first=True, padding_value=padval).to(device) # N x L x F
+  batched[:,:,-1][batched[:,:,-1]==padval] = torch.inf
+  batched[:,:,0][batched[:,:,0] == padval] = 0
+  batched[:,:,1][batched[:,:,1] == padval] = 0
+  labels = torch.stack(labels, dim=0)
+  return (batched, labels)
+
+def tracking_validation_collate(tensors):
+  datas = []
+  labels = []
+  names = []
+  for tensor, label, name in tensors:
+    datas.append(tensor)
+    labels.append(label)
+    names.append(name)
+
+
+  batched = nn.utils.rnn.pad_sequence(datas, batch_first=True).to(device)
+  labels = torch.stack(labels, dim=0)
+  return (batched, labels, names)
   
 def plot_grad_flow(named_parameters):
     ave_grads = []
@@ -99,20 +125,14 @@ def getprogressplot(trainloss, validloss, acc, nullac, novacc, pulsatoracc, tran
 def plot_from_tensor(data):
   fig = go.Figure()
 
-  w1 = data[:, 0].numpy()
-  w2 = data[:, 2].numpy()
-
-
-  dt = data[:, -2].numpy()
+  y = data[:, 0].numpy()
   day = data[:, -1].numpy()
 
 
-  fig.add_trace(go.Scatter(x=day, y=w1, marker=dict(size=5, opacity=0.7), name="w1mpro z-scored", mode='markers'))
-  fig.add_trace(go.Scatter(x=day, y=w2, marker=dict(size=5, opacity=0.7), name="w2mpro z-scored", mode='markers'))
+  fig.add_trace(go.Scatter(x=day, y=y, marker=dict(size=5, opacity=0.7), name="Y", mode='markers'))
 
   fig.layout.width = 800
   fig.layout.height = 0.65 * fig.layout.width
-
 
   return fig
 

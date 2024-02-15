@@ -13,6 +13,11 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         self.pandas.index = range(len(self.pandas))
         self.numpy = self.pandas.to_numpy()
         self.datatable = self.init_datatable()
+
+        
+    def reject_outliers(self, data, m):
+        data[np.abs(data - np.mean(data)) > np.std(data) * m] = np.mean(data)
+        return data
  
     
     def init_datatable(self):
@@ -59,6 +64,12 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         # Normalize with modified z-scoring
         w1norm = np.array([(mag - w1mean) / w1std for mag in w1mpro])
         w2norm = np.array([(mag - w2mean) / w2std for mag in w2mpro])
+        
+        quant = np.quantile(w1norm, 0.92)
+        w1norm = (1 / quant) * w1norm
+        quant = np.quantile(w2norm, 0.92)
+        w2norm = (1 / quant) * w2norm
+        
 
         if np.isnan(w1norm).any():
             raise Exception("w1norm has nan")
@@ -66,16 +77,36 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
             raise Exception("w2norm has nan")
         
         # Optional Flux format
-        to_flux_w1 = lambda m: 309.54 * 10**(-m / 2.5)
+        to_flux_w1 = lambda m: 306.681 * 10**(-m / 2.5)
         to_flux_w2 = lambda m: 171.787 * 10**(-m / 2.5)
         w1flux = to_flux_w1(w1mpro)
-        w2flux = to_flux_w2(w2mpro)
+        w2flux =  to_flux_w2(w2mpro)
+
+        outlier_idxr = np.abs(w1flux - np.mean(w1flux)) < 3.25 * np.std(w1flux)
+        w1flux = w1flux[outlier_idxr]
+        w2flux = w2flux[outlier_idxr]
+        mjds = mjds[outlier_idxr]
+        w1mpro = w1mpro[outlier_idxr]
+        w1sig = w1sig[outlier_idxr]
+        w2mpro = w2mpro[outlier_idxr]
+        w2sig = w2sig[outlier_idxr]
+
+        w1flux_norm = (w1flux - np.mean(w1flux)) / np.std(w1flux)
+        w1flux_norm = np.arcsinh(w1flux_norm)
+        w2flux_norm = (w2flux - np.mean(w2flux)) / np.std(w2flux)
+        w2flux_norm = np.arcsinh(w2flux_norm)
+
+        w1flux_unc = 0.713 * (0.002*w1flux)**0.8+0.000018
+        w1flux_unc_norm = -np.log10(w1flux_unc) / 3
+
         
-        # Flux normalization arcsin params
-        ADJ = 0
-        DIV = 0.001
-        w1flux_norm = np.arcsinh((to_flux_w1(w1mpro) - ADJ) /DIV)
-        w2flux_norm = np.arcsinh((to_flux_w2(w2mpro) - ADJ) /DIV)
+        # w1flux_norm = (w1flux_norm - np.mean(w1flux_norm)) / np.std(w1flux_norm)
+        # w2flux_norm = (w2flux_norm - np.mean(w2flux_norm)) / np.std(w2flux_norm)
+
+
+        # w1flux_norm = self.reject_outliers(w1flux_norm, 8)
+        # w2flux_norm = self.reject_outliers(w2flux_norm, 8)
+ 
 
         # Days since first timepoint
         day = mjds - mjds[0]
@@ -102,7 +133,7 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
             "norm": {
                 "w1": w1norm,
                 "w1flux": w1flux_norm,
-                "w1std": w1std,
+                "w1std": w1flux_unc_norm,
                 "w1sig": w1sig,
                 "w2": w2norm,
                 "w2std": w2std,
@@ -141,17 +172,15 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
 
     def to_tensor(self):
         # Len(pts) x 3 matrix
-        w1 = self.datatable["norm"]["w1"]
-        w2 = self.datatable["norm"]["w2"]
-        dt = self.datatable["norm"]["dt"]
         day = self.datatable["norm"]["day"]
         w1f = self.datatable["norm"]["w1flux"]
-        std_val = (self.datatable["norm"]["w1std"] + self.datatable["norm"]["w2std"]) / 2
-        std = np.array([std_val for _ in w1])
+        std = self.datatable["norm"]["w1std"]
 
         # Len(pts) x 3 matrix
         # IMPORTANT! Defines order of data
-        tnsr = torch.tensor(np.stack((w1f, std, day), axis=0).T)
+
+        tnsr = torch.tensor(np.stack((w1f, std, day), axis=0).T) 
+        # tnsr = tnsr[torch.abs(tnsr[:, 0]) < 2.5 - torch.mean(tnsr[:, 0])) <  * torch.std(tnsr[:, 0])] # OUTLIER REJECTION to 5 sigma
         return tnsr.to(torch.float32)
     
     def __getitem__(self, key):

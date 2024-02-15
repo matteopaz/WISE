@@ -13,6 +13,7 @@ import os
 import time
 import plotly.graph_objects as go
 from plotly_style import update_layout
+from sklearn.metrics import f1_score
 
 ROOT = os.path.join("./")
 
@@ -20,7 +21,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 loss_fn = nn.CrossEntropyLoss().to(device)
 
-def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, log=False):
+def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, log=False, tracking=False):
   progress_bar = tqdm(total=epochs, desc="Training Progress")
 
   trainloss = []
@@ -31,10 +32,14 @@ def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, lo
   pulsatingts = []
   transitts = []
   accuracyts = []
+  f1ts = []
   
-  num_of_valids = np.sum([s[0].shape[0] for s in validloader]) # works only if batched
-  faileds = [0 for _ in range(num_of_valids)]
-
+  faileds = {}
+  if tracking:
+    for _, __, names in validloader:
+      for name in names:
+        faileds[name] = [0,None]
+  
   for e in range(epochs):
     epoch_loss = []
     valid_loss = []
@@ -51,9 +56,9 @@ def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, lo
     transits = 0
     nulls = 0
     exs = 0
-    
+
+    model.train()
     for data, label in trainloader:
-      model.train()
       if log:
         print("Data", data)
         print("Label", label)
@@ -70,21 +75,33 @@ def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, lo
       optim.step()
       optim.zero_grad()
 
-
-    for data, label in validloader:
-      model.eval()
+    model.eval()
+    f1_epoch = []
+    for example in validloader:
+      
+      if tracking:
+        data, label, name = example
+      else:
+        data, label = example
+      
       out = model(data)
       loss = loss_fn(out, label)
       valid_loss.append(loss.item())
       i = torch.argmax(out, dim=1).cpu()
       j = torch.argmax(label, dim=1).cpu()
+      
+      f1_epoch.append(f1_score(torch.argmax(label, dim=1).cpu(), torch.argmax(out, dim=1).cpu(), average="micro"))
 
-      for ex, (idx, jdx) in enumerate(zip(i,j)):
+      for num, (exname, idx, jdx) in enumerate(zip(name, i, j)):
         exs += 1
         if idx == jdx:
           correct += 1
-        else:
-          faileds[ex] += 1
+        elif tracking:
+          faileds[exname][0] += 1
+          if faileds[exname][1] == None:
+            faileds[exname][1] = torch.zeros_like(out[num])
+          
+          faileds[exname][1][torch.argmax(out[num])] += 1
 
         if jdx == 0:
           nulls += 1
@@ -104,6 +121,7 @@ def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, lo
           if idx == jdx:
             transit_correct +=1
 
+    f1ts.append(np.mean(f1_epoch))
     training_loss_epoch = np.mean(epoch_loss)
     validation_loss_epoch = np.mean(valid_loss)
 
@@ -124,24 +142,30 @@ def gen_train(model, kwargs, optim, lossfn, trainloader, validloader, epochs, lo
 
 
     progress_bar.update(1)
-    p = getprogressplot(trainloss, validloss, accuracyts, nullts, novats, pulsatingts, transitts, epochs, e)
-    clear_output(wait=False)
+    p = getprogressplot(trainloss, validloss, f1ts, nullts, novats, pulsatingts, transitts, epochs, e)
+    clear_output(wait=True)
     display(p)
     print("Most Failed: ", np.argmax(faileds))
-
     print("Epoch ", e, ": ", training_loss_epoch)
     print("nulls:", nullac, "novas: ", novacc, "pulsators: ", pulsatoracc, "transits: ", transitacc)
 
   x = range(epochs)
 
   p = getprogressplot(trainloss, validloss, accuracyts, nullts, novats, pulsatingts, transitts, epochs, e)
-  clear_output(wait=True)
+  clear_output(wait=False)
   time.sleep(1)
+  p.write_image("./latestplot.png")
   display(p)
+  faileds = sorted(faileds.items(), key= lambda item: item[1][0], reverse=True)
+  for name, val in faileds:
+    if isinstance(val[1], torch.Tensor):
+      val[1] = torch.trunc(val[1]).squeeze().tolist()
+      # val[1] = nn.functional
+    else:
+      val[1] = 0
+    
   print("faileds of valid: ", faileds)
   # print 3 most failed indexes in one line
-  
-  print("Most Failed: ", np.argsort(faileds)[-3:])
   print("Epoch ", e, ": ", training_loss_epoch)
 
   savestr = "state_dicts/model" + datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -198,7 +222,9 @@ def compete(trainers, epochs, trainloader, validloader, log=False):
         optim.step()
 
 
-      for data, label in validloader:
+      for example in validloader:
+        data = example[0]
+        label = example[1]
         model.eval()
         out = model(data)
         loss = loss_fn(out, label)

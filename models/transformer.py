@@ -5,6 +5,9 @@ import numpy as np
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
+torch.set_default_dtype(torch.float32)
+torch.set_default_device(device)
+
 class FluxAnomalyPredictionTF(nn.Module):
   def __init__(self, stride, dropout, bn=False, features=3, residual=0, out=4):
     super().__init__()
