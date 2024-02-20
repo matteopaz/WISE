@@ -25,3 +25,5 @@ dataset_imgs/*
 state_dicts/*
 
 .DS_Store
+
+datagen/imgs/*

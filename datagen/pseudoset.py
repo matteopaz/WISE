@@ -4,9 +4,10 @@ from collections import defaultdict
 import numpy as np
 
 class PseudoSet(Dataset):
-    def __init__(self, buckets, valid=False):
+    def __init__(self, buckets, valid=False, length_batching=True):
         self.all = []
         self.lengrouped = defaultdict(list)
+        self.lenbatching = length_batching
         self.valid = valid
 
         for kind in buckets:
@@ -36,16 +37,20 @@ class PseudoSet(Dataset):
 
 
     def __len__(self):
-        return len(self.lengrouped.keys())
-        # return len(self.all)
+        if self.lenbatching:
+            return len(self.lengrouped.keys())
+        else:
+            return len(self.all)
     
     def __getitem__(self, idx):
-        oflen = self.lengrouped[list(self.lengrouped.keys())[idx]]
-        batch = torch.stack([x[0] for x in oflen], dim=0)
-        labels = torch.stack([x[1] for x in oflen], dim=0)
-        if self.valid:
-            names = [x[2] for x in oflen]
-            return batch, labels, names
+        if self.lenbatching:
+            oflen = self.lengrouped[list(self.lengrouped.keys())[idx]]
+            batch = torch.stack([x[0] for x in oflen], dim=0)
+            labels = torch.stack([x[1] for x in oflen], dim=0)
+            if self.valid:
+                names = [x[2] for x in oflen]
+                return batch, labels, names
+            else:
+                return batch, labels
         else:
-            return batch, labels
-        # return self.all[idx]
+            return self.all[idx]

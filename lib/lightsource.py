@@ -58,8 +58,9 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         w2var = np.nanvar(w2mpro)
         w1std = np.sqrt(w1var)
         w2std = np.sqrt(w2var)
-        w1mad = np.nanmedian([abs(mag - w1median) for mag in w1mpro]) # Mean Absolute Deviation - Not used
-        w2mad = np.nanmedian([abs(mag - w2median) for mag in w2mpro])
+
+        if np.isnan(w1mpro).any():
+            raise Exception("w1mpro has nan")
 
         # Normalize with modified z-scoring
         w1norm = np.array([(mag - w1mean) / w1std for mag in w1mpro])
@@ -72,17 +73,22 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         
 
         if np.isnan(w1norm).any():
+            print(len(w1mpro))
+            print(w1mean)
+            print(w1var)
+            print(w1std)
+            print(np.isnan(w1mpro).any())   
             raise Exception("w1norm has nan")
         if np.isnan(w2norm).any():
             raise Exception("w2norm has nan")
         
         # Optional Flux format
-        to_flux_w1 = lambda m: 306.681 * 10**(-m / 2.5)
+        to_flux_w1 = lambda m: 309.54 * 10**(-m / 2.5)
         to_flux_w2 = lambda m: 171.787 * 10**(-m / 2.5)
         w1flux = to_flux_w1(w1mpro)
         w2flux =  to_flux_w2(w2mpro)
 
-        outlier_idxr = np.abs(w1flux - np.mean(w1flux)) < 3.25 * np.std(w1flux)
+        outlier_idxr = np.abs(w1flux - np.mean(w1flux)) < 4 * np.std(w1flux)
         w1flux = w1flux[outlier_idxr]
         w2flux = w2flux[outlier_idxr]
         mjds = mjds[outlier_idxr]
@@ -99,6 +105,8 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         w1flux_unc = 0.713 * (0.002*w1flux)**0.8+0.000018
         w1flux_unc_norm = -np.log10(w1flux_unc) / 3
 
+        w1_snr_est = -np.log10(w1flux) / 3
+
         
         # w1flux_norm = (w1flux_norm - np.mean(w1flux_norm)) / np.std(w1flux_norm)
         # w2flux_norm = (w2flux_norm - np.mean(w2flux_norm)) / np.std(w2flux_norm)
@@ -109,8 +117,11 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
  
 
         # Days since first timepoint
-        day = mjds - mjds[0]
-        day_norm = day / np.max(day) # Normalized days from 0 to 1
+        # day = mjds - mjds[0]
+        # day_norm = day / np.max(day) # Normalized days from 0 to 1
+
+        day = mjds - np.min(mjds)
+        day_norm = (day / 4000)
 
         # Times since last observation
         dt = [day[i+1] - day[i] for i in range(len(day) - 1)] # has values for all but first day
@@ -134,6 +145,7 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
                 "w1": w1norm,
                 "w1flux": w1flux_norm,
                 "w1std": w1flux_unc_norm,
+                "w1snrest": w1_snr_est,
                 "w1sig": w1sig,
                 "w2": w2norm,
                 "w2std": w2std,
@@ -174,12 +186,12 @@ class LightSource: # All the data on a single source from WISE, nicely formatted
         # Len(pts) x 3 matrix
         day = self.datatable["norm"]["day"]
         w1f = self.datatable["norm"]["w1flux"]
-        std = self.datatable["norm"]["w1std"]
+        snrest = self.datatable["norm"]["w1snrest"]
 
         # Len(pts) x 3 matrix
         # IMPORTANT! Defines order of data
 
-        tnsr = torch.tensor(np.stack((w1f, std, day), axis=0).T) 
+        tnsr = torch.tensor(np.stack((w1f, snrest, day), axis=0).T) 
         # tnsr = tnsr[torch.abs(tnsr[:, 0]) < 2.5 - torch.mean(tnsr[:, 0])) <  * torch.std(tnsr[:, 0])] # OUTLIER REJECTION to 5 sigma
         return tnsr.to(torch.float32)
     

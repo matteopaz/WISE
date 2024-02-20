@@ -2,13 +2,12 @@ import torch
 import numpy as np
 import plotly.graph_objects as go
 import os
-import sys
+import glob
 import tqdm
 from pseudoset import PseudoSet
 
-ROOT = os.path.join("./")
-sys.path.append(ROOT + "lib")
-from lightsource import LightSource
+num_each = int(input("How many of each type of light source?"))
+plotting = bool(input("Plotting?") == "y")
 
 def plot(x, y):
     fig = go.Figure()
@@ -40,8 +39,6 @@ def baseflux(): # Distribution stuff
 def getstd(flux):
     uncertainty = 0.713 * (0.002*flux)**0.8+0.000018 # Canonically accurate noise vs flux # UNCERTAINTY / FLUX / MAGNITUDE / SNR keywords
     return uncertainty / 2 # Sets uncertainty value to 2 sigma error ~ 95% confidence
-
-num_each = 100
 
 shortspacing = 0.115 # days
 longspacing = 175 # days between obs groups
@@ -302,13 +299,13 @@ for kind in buckets:
     validbuckets[kind] = buckets[kind][:amt_valid]
     buckets[kind] = buckets[kind][amt_valid:]
 
-trainset = PseudoSet(buckets)
-validset = PseudoSet(validbuckets, True)
+trainset = PseudoSet(buckets, length_batching=False)
+validset = PseudoSet(validbuckets, False, length_batching=False)
 
-with open("processed_datasets/pseudotrain.pt", "wb") as f:
+with open("../processed_datasets/pseudotrain.pt", "wb") as f:
     torch.save(trainset, f)
 
-with open("processed_datasets/pseudovalid.pt", "wb") as f:
+with open("../processed_datasets/pseudovalid.pt", "wb") as f:
     torch.save(validset, f)
 
 print("Complete")
@@ -335,24 +332,37 @@ print("Complete")
 #     plt.write_image(f"./dataset_imgs/pseudo/transit/{i}_fold.png")
 # print("Images saved")
 
-# for i, ex in enumerate(buckets["null"]):
-#     plt = plot(ex[0], ex[1])
-#     plt.write_image(f"./dataset_imgs/pseudo/null/{i}.png")
+if plotting:
+    path = glob.glob("./dataset_imgs/pseudo/null/*")
+    for p in path:
+        os.remove(p)
+    for i, ex in enumerate(buckets["null"]):
+        plt = plot(ex[0], ex[1])
+        plt.write_image(f"./dataset_imgs/pseudo/null/{i}.png")
 
-# for i, ex in enumerate(buckets["nova"]):
-#     plt = plot(ex[0], ex[1])
-#     plt.write_image(f"./dataset_imgs/pseudo/nova/{i}.png")
+    path = glob.glob("./dataset_imgs/pseudo/nova/*")
+    for p in path:
+        os.remove(p)
+    for i, ex in enumerate(buckets["nova"]):
+        plt = plot(ex[0], ex[1])
+        plt.write_image(f"./dataset_imgs/pseudo/nova/{i}.png")
 
-# for i, ex in enumerate(buckets["pulsating_var"]):
-#     plt = plot(ex[0], ex[1])
-#     plt.write_image(f"./dataset_imgs/pseudo/pulsating_var/{i}.png")
+    path = glob.glob("./dataset_imgs/pseudo/pulsating_var/*")
+    for p in path:
+        os.remove(p)
+    for i, ex in enumerate(buckets["pulsating_var"]):
+        plt = plot(ex[0], ex[1])
+        plt.write_image(f"./dataset_imgs/pseudo/pulsating_var/{i}.png")
 
-#     plt = plot(ex[0] % ex[2][0], ex[1])
-#     plt.write_image(f"./dataset_imgs/pseudo/pulsating_var/{i}_fold.png")
+        plt = plot(ex[0] % ex[2][0], ex[1])
+        plt.write_image(f"./dataset_imgs/pseudo/pulsating_var/{i}_fold.png")
 
-# for i, ex in enumerate(buckets["transit"]):
-#     plt = plot(ex[0], ex[1])
-#     plt.write_image(f"./dataset_imgs/pseudo/transit/{i}.png")
-#     plt = plot(ex[0] % ex[2], ex[1])
-#     plt.write_image(f"./dataset_imgs/pseudo/transit/{i}_fold.png")
-# print("Images saved")
+    path = glob.glob("./dataset_imgs/pseudo/transit/*")
+    for p in path:
+        os.remove(p)
+    for i, ex in enumerate(buckets["transit"]):
+        plt = plot(ex[0], ex[1])
+        plt.write_image(f"./dataset_imgs/pseudo/transit/{i}.png")
+        plt = plot(ex[0] % ex[2], ex[1])
+        plt.write_image(f"./dataset_imgs/pseudo/transit/{i}_fold.png")
+    print("Images saved")

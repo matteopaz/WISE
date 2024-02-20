@@ -36,7 +36,7 @@ for roots, dirs, files in os.walk(ROOT + "object_spreadsheets/"):
             i += 1
             radius = float(rad)
             qual = int(qual)
-            if qual != 2: # Filter out 1 (Terrible) and 3 (Already in Training set)
+            if qual != obj_qual:
                 continue
 
             print("Querying {}...".format(objname))

@@ -11,24 +11,26 @@ import matplotlib.pyplot as plt
 
 torch.set_default_device("cuda")
 
-testing = False 
-name = "nancy"
-inp = "1deg"
+name = "modelSean_Simpson"
 
 # For Testing
 print("Loading data...")
 t1 = perf_counter()
+with open("./cached_data/testdata.pkl", "rb") as f:
+    data_in = pickle.load(f)
 
-data_in = pd.read_csv("./runner/inp/{}.csv".format(inp))
-
-with open("./runner/cluster/{}_ptrs.pkl".format(inp), "rb") as f:
-    ptrs = pickle.load(f)
-    
-
+data_in.dropna(axis=0, how="any", inplace=True)
 
 print(f"Elapsed -- {perf_counter()-t1}")
-    
-batches = BatchGen(data_in, ptrs, batchsize=10)
+
+print("Clustering...")
+t1 = perf_counter()
+labelmap = get_labels(data_in)
+print(f"Elapsed -- {perf_counter()-t1}")
+print("Making Batches...")
+t1 = perf_counter()
+batches = BatchGen(data_in, labelmap, batchsize=1)
+print(f"Elapsed -- {perf_counter()-t1}")
 print("Readying Model...")
 
 with open(f"./state_dicts/{name}.pkl", "rb") as f:
@@ -59,18 +61,29 @@ for kind in founds:
 print(f"Elapsed -- {perf_counter()-t1}")
 print("Outputting...")
 
-with open("./runner/null.txt", "w") as f:
-    for conf, (ra, dec) in founds[0]:
-        f.write("{} {} --- {}\n".format(ra, dec, conf))
+maxdist = 3/3600 # arcsecs from correct center
+with open("./cached_data/key.pkl", "rb") as f:
+    key = pickle.load(f)
+    
+total = len(key)
+correct = 0
 
-with open("./runner/nova.txt", "w") as f:
-    for conf, (ra, dec) in founds[1]:
-        f.write("{} {} --- {}\n".format(ra, dec, conf))
-        
-with open("./runner/pulsating_var.txt", "w") as f:
-    for conf, (ra, dec) in founds[2]:
-        f.write("{} {} --- {}\n".format(ra, dec, conf))
+pred_y = []
+true_y = []
+for classif in founds:
+    for confidence, foundcenter in founds[classif]:
+        for center, (kind, name) in key.items():
+            if ((foundcenter[0] - center[0])**2 + (foundcenter[1] - center[1])**2) < maxdist**2:
+                pred_y.append(classif)
+                true_y.append(kind)
+                if classif == kind:
+                    print(f"Got {name} correct as {kind}")
+                    correct += 1
+                else:
+                    print(f"Got {name} incorrectly classified as {classif}, was actually {kind} - conf: {int(confidence*1000) / 1000}")
+print(f"Total Accuracy: {correct * 100 / total}%")
 
-with open("./runner/transit.pkl", "wb") as f:
-    for conf, (ra, dec) in founds[3]:
-        f.write("{} {} --- {}\n".format(ra, dec, conf))
+conf = confusion_matrix(true_y, pred_y)
+disp = ConfusionMatrixDisplay(conf)
+disp.plot()
+plt.savefig("./temp.png")

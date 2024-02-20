@@ -4,8 +4,8 @@ import time
 import requests
 
 COLS = ["ra", "dec", "mjd", "w1mpro", "w2mpro", "w1flux", "qual_frame"]
-BOXSIZE = 1 # In Square Deg
-BOXCENTER = (0.0,60.0) # RA, Dec
+BOXSIZE = 25 # In Square Deg
+BOXCENTER = (86.27208, -2.76164) # RA, Dec
 QUALFRAMEMIN = 4
 
 bxcntr = np.array(BOXCENTER)
