@@ -4,14 +4,13 @@ import plotly.graph_objects as go
 import os
 import glob
 import tqdm
-from pseudoset import PseudoSet
 
 num_each = int(input("How many of each type of light source?"))
 plotting = bool(input("Plotting?") == "y")
 
 def plot(x, y):
     fig = go.Figure()
-    ymag = -2.5 * np.log10(y / 306.681) 
+    ymag = -2.5 * np.log10(y / 309.54) 
     fig.add_trace(go.Scatter(x=x, y=ymag, mode='markers', marker=dict(size=3, opacity=0.7, color="blue")))
     fig.update_layout(
         xaxis_title="Time (days)",

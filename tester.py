@@ -23,13 +23,21 @@ data_in.dropna(axis=0, how="any", inplace=True)
 
 print(f"Elapsed -- {perf_counter()-t1}")
 
-print("Clustering...")
-t1 = perf_counter()
-labelmap = get_labels(data_in)
-print(f"Elapsed -- {perf_counter()-t1}")
+try:
+    with open("./cached_data/testing_labelmap.pkl", "rb") as f:
+        labelmap = pickle.load(f)
+except:
+    print("Clustering...")
+    t1 = perf_counter()
+    labelmap = get_labels(data_in)
+    print(f"Elapsed -- {perf_counter()-t1}")
+
+    with open("./cached_data/testing_labelmap.pkl", "wb") as f:
+        pickle.dump(labelmap, f)
+
 print("Making Batches...")
 t1 = perf_counter()
-batches = BatchGen(data_in, labelmap, batchsize=1)
+batches = BatchGen(data_in, labelmap, batchsize=240)
 print(f"Elapsed -- {perf_counter()-t1}")
 print("Readying Model...")
 

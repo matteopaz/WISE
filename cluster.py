@@ -2,42 +2,44 @@ from sklearn.cluster import DBSCAN
 from collections import defaultdict
 import numpy as np
 from datetime import datetime
-from joblib import parallel_backend
 import pickle
 import pandas as pd
 import time
+import json 
 
-csv = "orionsbelt25deg"
+csv = "1deg"
 
 print("Reading CSV")
-dataframe = pd.read_csv("./runner/inp/{}.csv".format(csv))
-dataframe = dataframe.fillna(0.0)
+dataframe = pd.read_csv("./runner/inp/{}_clean.csv".format(csv))
 print("CSV Read")
 
 t1 = time.time()
 
 print("Clustering.. started at", datetime.now().strftime("%H:%M:%S"))
-def cluster(dataframe):
+def cluster(df):
     clusters = defaultdict(list)
-
-    eps = 1/3600 # 1 arcsec
-    min_samp = 10
-    pos = dataframe[["ra", "dec"]]
+    pos = df[["ra", "dec"]]
 
     print(len(pos), "rows")
-    dbscan = DBSCAN(eps=eps, min_samples=min_samp, n_jobs=-1)
-    clustered = dbscan.fit(pos)
-    labels = clustered.labels_
-
-
+    dbscan = DBSCAN(eps=1/3600, min_samples=16, n_jobs=-1, algorithm="kd_tree")
+    labels = dbscan.fit_predict(pos)
+    
     for i, clusternum in enumerate(labels):
-        clusters[clusternum].append(i)
+        if clusternum != -1:
+            clusters[clusternum].append(i)
+    
+    # delete clusters with less than 100 members
+    for k in list(clusters.keys()):
+        idxs = clusters[k]
+        median_w1 = df.iloc[idxs]["w1mpro"].median()
+        if len(idxs) < 100 and (median_w1 > 13 or len(idxs) < 20): # keep only well sampled or potential novae
+            del clusters[k]
+
     return clusters
 
 c = cluster(dataframe)
 t2 = time.time()
 print("Time Elapsed: ", t2 - t1)
-
 
 with open("./runner/cluster/{}_ptrs.pkl".format(csv), "wb") as f:
     pickle.dump(c, f)
