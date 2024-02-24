@@ -251,6 +251,8 @@ def itertrain(model, kwargs, optim, loss_fn, trainloader, validloader, epochs, i
 
   e = 0
   for data, label in trainloader:
+    if e > epochs * itersperepoch:
+      break
     if torch.isnan(data).any():
       idkx = torch.where(torch.isnan(data))[0]
       # print(data[idkx])
@@ -487,3 +489,71 @@ def compete(trainers, epochs, trainloader, validloader, log=False):
     clear_output(wait=True)
     fig.show()
       
+
+def itercompete(trainers, itersperepoch, epochs, trainloader, validloader, log=False):
+  progress_bar = tqdm(total=epochs, desc="Training Progress")
+  loss_fn = nn.CrossEntropyLoss().to(device)
+  trainloss = {}
+  validloss = {}
+  trainlossepoch = {}
+  validlossepoch = {}
+
+  colors = ['blue', 'orange', 'red', 'green', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+  tracecolor = {}
+
+  for name, _model, _optim in trainers:
+    trainloss[name] = []
+    validloss[name] = []
+    trainlossepoch[name] = []
+    validlossepoch[name] = []
+    tracecolor[name] = np.random.choice(colors)
+
+
+  epoch = 0
+  for data, label in trainloader:
+    if epoch > epochs * itersperepoch:
+      break
+    else:
+      epoch += 1
+    for name, model, optim in trainers:
+      model.train()
+      out = model(data)
+      loss = loss_fn(out, label)
+      loss.backward()
+      optim.step()
+      optim.zero_grad()
+      trainlossepoch[name].append(loss.item())
+
+    if epoch % itersperepoch == 0:
+      for name, model, optim in trainers:
+        model.eval()
+        for example in validloader:
+          data = example[0]
+          label = example[1]
+          out = model(data)
+          loss = loss_fn(out, label)
+          validlossepoch[name].append(loss.item())
+        
+        validloss[name].append(np.mean(validlossepoch[name]))
+        validlossepoch[name] = []
+        trainloss[name].append(np.mean(trainlossepoch[name]))
+        trainlossepoch[name] = []
+
+      traces = []
+      colors = ['blue', 'orange', 'red', 'green', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+
+      mins = {}
+
+      for i, (name, _, __) in enumerate(trainers):
+        # tr1 = go.Scatter(x=np.arange(epochs // itersperepoch), y=trainloss[name], mode='lines', name=f'Training Loss --{name}', line=dict(color=color[0]), opacity=0.8)
+        tr2 = go.Scatter(x=np.arange(len(validloss[name])), y=validloss[name], mode='lines', name=f'Validation Loss --{name}', line=dict(color=tracecolor[name]), opacity=0.5)
+        traces += [tr2]
+        mins[name] = np.min(validloss[name])
+      
+      fig = go.Figure(data=traces)
+      fig.update_layout(title=f"Epoch {epoch}", xaxis_title="Epochs", yaxis_title="Loss", width=1000)
+      clear_output(wait=True)
+      fig.show()
+      print(f"{n} - {m}" for n, m in mins.items())
+
+

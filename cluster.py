@@ -6,8 +6,9 @@ import pickle
 import pandas as pd
 import time
 import json 
+import resource
 
-csv = "1deg"
+csv = "orionsbelt25deg"
 
 print("Reading CSV")
 dataframe = pd.read_csv("./runner/inp/{}_clean.csv".format(csv))

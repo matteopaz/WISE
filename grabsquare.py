@@ -3,9 +3,9 @@ import subprocess
 import time
 import requests
 
-COLS = ["ra", "dec", "mjd", "w1mpro", "w2mpro", "w1flux", "qual_frame"]
-BOXSIZE = 1 # In Square Deg
-BOXCENTER = (86.27208, -2.76164) # RA, Dec
+COLS = ["ra", "dec", "mjd", "w1mpro", "qual_frame"]
+BOXSIZE = 100 # In Square Deg
+BOXCENTER = (80, -5) # RA, Dec
 QUALFRAMEMIN = 4
 
 bxcntr = np.array(BOXCENTER)

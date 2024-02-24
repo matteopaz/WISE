@@ -54,10 +54,10 @@ class GenSet(IterableDataset):
 
         r = np.random.random()
         if r > 0.85: # .15 chance of polars
-            self.apparition_frequencies = [10, 12, 14, 16, 50, 100, 200, 200, 100000, 500, 50, 100]
+            self.apparition_frequencies = [10, 11, 12, 13, 14, 15, 16, 52, 102, 240, 210, 100000, 500, 50, 110]
             n_each = self.batchsize // 16 # to make room in memory
         else:
-            self.apparition_frequencies = [10, 10, 10, 10, 10, 10, 14, 14, 14, 14, 20, 20, 20, 30, 30, 50, 100]
+            self.apparition_frequencies = [10, 11, 12, 13, 13, 10, 14, 14, 14, 14, 20, 21, 24, 30, 35, 54, 100]
 
 
         split = [int(self.batchsize * self.prop[i]) for i in range(4)]
@@ -147,7 +147,7 @@ class GenSet(IterableDataset):
             num = int(self.s([5, 0.075*len(x1)]))
             # choose num random x values from x1
             indices = torch.randperm(len(x1) - 1)[:num]
-            values = torch.tensor([self.s([1,3]) for _ in range(num)])
+            values = torch.tensor([self.s([1,2.5]) if np.random.random() > 0.5 else self.s([-2.5,-1]) for _ in range(num)])
             out[indices, 0] = values
         
         if np.random.random() > 0.9:

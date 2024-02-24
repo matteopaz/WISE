@@ -12,8 +12,8 @@ import json
 
 torch.set_default_device("cuda")
 
-name = "modelSean_Simpson"
-inp = "1deg"
+name = "GOOD"
+inp = "orionsbelt25deg"
 
 # For Testing
 print("Loading data...")

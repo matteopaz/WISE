@@ -1,7 +1,7 @@
 import pickle
 import pandas as pd
 
-file = "./runner/inp/1deg"
+file = "./runner/inp/orionsbelt25deg"
 
 dataframe = pd.read_csv(file + ".csv")
 
